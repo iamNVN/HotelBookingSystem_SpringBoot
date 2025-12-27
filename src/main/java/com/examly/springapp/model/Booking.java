@@ -44,6 +44,7 @@ public class Booking {
     @JoinColumn(name = "room_id", nullable = false)
     private Room room;
     
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Payment> payments;
     

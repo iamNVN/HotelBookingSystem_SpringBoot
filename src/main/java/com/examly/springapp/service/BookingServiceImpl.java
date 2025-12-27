@@ -4,6 +4,8 @@ import com.examly.springapp.model.Booking;
 import com.examly.springapp.model.Guest;
 import com.examly.springapp.model.Room;
 import com.examly.springapp.repository.BookingRepo;
+import com.examly.springapp.repository.GuestRepo;
+import com.examly.springapp.repository.RoomRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +24,12 @@ public class BookingServiceImpl implements BookingService {
     
     @Autowired
     private BookingRepo bookingRepo;
+
+    @Autowired
+    private RoomRepo roomRepo;
+
+    @Autowired
+    private GuestRepo guestRepo;
     
     @Override
     public Booking createBooking(Booking booking) {
@@ -33,9 +41,18 @@ public class BookingServiceImpl implements BookingService {
         if (booking.getCheckInDate().isBefore(LocalDate.now())) {
             throw new RuntimeException("Check-in date cannot be in the past");
         }
+
+        // Fetch Room and Guest from DB
+        Room room = roomRepo.findById(booking.getRoom().getRoomId())
+                .orElseThrow(() -> new RuntimeException("Room not found"));
+        Guest guest = guestRepo.findById(booking.getGuest().getGuestId())
+                .orElseThrow(() -> new RuntimeException("Guest not found"));
+
+        booking.setRoom(room);
+        booking.setGuest(guest);
         
-        // Check room availability
-        if (!isRoomAvailable(booking.getRoom(), booking.getCheckInDate(), booking.getCheckOutDate())) {
+        // Check room availability using the fetched room
+        if (!isRoomAvailable(room, booking.getCheckInDate(), booking.getCheckOutDate())) {
             throw new RuntimeException("Room is not available for the selected dates");
         }
         
@@ -45,7 +62,7 @@ public class BookingServiceImpl implements BookingService {
             numberOfNights = 1; // Minimum one night
         }
         
-        booking.setTotalAmount(booking.getRoom().getCurrentPrice().multiply(java.math.BigDecimal.valueOf(numberOfNights)));
+        booking.setTotalAmount(room.getCurrentPrice().multiply(java.math.BigDecimal.valueOf(numberOfNights)));
         booking.setBookingDate(LocalDateTime.now());
         
         return bookingRepo.save(booking);
@@ -88,20 +105,30 @@ public class BookingServiceImpl implements BookingService {
                 }
             }
             
+            if (booking.getRoom() != null && booking.getRoom().getRoomId() != null) {
+                Room room = roomRepo.findById(booking.getRoom().getRoomId())
+                        .orElseThrow(() -> new RuntimeException("Room not found"));
+                bookingToUpdate.setRoom(room);
+            }
+            
+            if (booking.getGuest() != null && booking.getGuest().getGuestId() != null) {
+                Guest guest = guestRepo.findById(booking.getGuest().getGuestId())
+                        .orElseThrow(() -> new RuntimeException("Guest not found"));
+                bookingToUpdate.setGuest(guest);
+            }
+
             bookingToUpdate.setCheckInDate(booking.getCheckInDate());
             bookingToUpdate.setCheckOutDate(booking.getCheckOutDate());
-            bookingToUpdate.setRoom(booking.getRoom());
-            bookingToUpdate.setGuest(booking.getGuest());
             bookingToUpdate.setNumberOfGuests(booking.getNumberOfGuests());
             bookingToUpdate.setSpecialRequests(booking.getSpecialRequests());
             bookingToUpdate.setStatus(booking.getStatus());
             
-            // Recalculate total amount
-            long numberOfNights = ChronoUnit.DAYS.between(booking.getCheckInDate(), booking.getCheckOutDate());
+            // Recalculate total amount using the room from DB (bookingToUpdate.getRoom())
+            long numberOfNights = ChronoUnit.DAYS.between(bookingToUpdate.getCheckInDate(), bookingToUpdate.getCheckOutDate());
             if (numberOfNights <= 0) {
                 numberOfNights = 1;
             }
-            bookingToUpdate.setTotalAmount(booking.getRoom().getCurrentPrice().multiply(java.math.BigDecimal.valueOf(numberOfNights)));
+            bookingToUpdate.setTotalAmount(bookingToUpdate.getRoom().getCurrentPrice().multiply(java.math.BigDecimal.valueOf(numberOfNights)));
             
             return bookingRepo.save(bookingToUpdate);
         }

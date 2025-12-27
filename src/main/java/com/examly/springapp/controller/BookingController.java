@@ -24,12 +24,12 @@ public class BookingController {
     private BookingService bookingService;
     
     @PostMapping
-    public ResponseEntity<Booking> createBooking(@RequestBody Booking booking) {
+    public ResponseEntity<?> createBooking(@RequestBody Booking booking) {
         try {
             Booking createdBooking = bookingService.createBooking(booking);
             return new ResponseEntity<>(createdBooking, HttpStatus.CREATED);
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
     
@@ -52,15 +52,15 @@ public class BookingController {
     }
     
     @PutMapping("/{id}")
-    public ResponseEntity<Booking> updateBooking(@PathVariable Long id, @RequestBody Booking booking) {
+    public ResponseEntity<?> updateBooking(@PathVariable Long id, @RequestBody Booking booking) {
         try {
             Booking updatedBooking = bookingService.updateBooking(id, booking);
             return new ResponseEntity<>(updatedBooking, HttpStatus.OK);
         } catch (RuntimeException e) {
             if (e.getMessage().contains("not found")) {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
             }
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
     

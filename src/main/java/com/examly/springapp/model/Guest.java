@@ -27,6 +27,7 @@ public class Guest {
     @Column
     private LocalDateTime registrationDate;
     
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "guest", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Booking> bookings;
     
