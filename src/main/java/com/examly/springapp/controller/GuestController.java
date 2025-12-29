@@ -22,12 +22,12 @@ public class GuestController {
     private GuestService guestService;
     
     @PostMapping
-    public ResponseEntity<Guest> createGuest(@RequestBody Guest guest) {
+    public ResponseEntity<?> createGuest(@RequestBody Guest guest) {
         try {
             Guest createdGuest = guestService.createGuest(guest);
             return new ResponseEntity<>(createdGuest, HttpStatus.CREATED);
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
     
